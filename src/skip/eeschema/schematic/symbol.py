@@ -39,11 +39,11 @@ class SymbolCollection(NamedElementCollection):
     UnitToName = ['N/A', 'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']
     def __init__(self, parent, elements:list):
         super().__init__(parent, elements, 
-                         lambda s: s.property.Reference.value if s.unit.value == 1 else f'{s.property.Reference.value}_{self.UnitToName[s.unit.value]}')
+                         lambda s: s.property.Reference.value if s.unit == None or s.unit.value == 1 else f'{s.property.Reference.value}_{self.UnitToName[s.unit.value]}')
         
         self._multi_unit_elements = dict()
         for el in elements:
-            if el.unit.value > 1:
+            if el.unit !=None and el.unit.value > 1:
                 self._multi_unit_elements[el.property.Reference.value] = True
                 
         for multis in self._multi_unit_elements.keys():
