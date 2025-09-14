@@ -9,6 +9,7 @@ import sexpdata
 import uuid
 import re
 import copy
+from functools import reduce
 
 import logging 
 log = logging.getLogger(__name__)
@@ -162,7 +163,7 @@ class ParsedValue(AccessesTree):
         return self._value 
         
     @value.setter 
-    def value(self, setTo):
+    def value(self, setTo: str|bool|int|float|list):
         '''
             Set values on the .value attribute.
             
@@ -170,10 +171,20 @@ class ParsedValue(AccessesTree):
             sch.symbol.C4.dnp.value = True 
         
         '''
-        if self._is_bool_symbol(self._value):
-            
-            if not isinstance(setTo, str):
-                
+
+        children_updated = False
+        if isinstance(setTo, list):
+            all_simple = reduce(lambda acc, x: acc and not isinstance(x, list), setTo, True)
+            if all_simple:
+                self._value = setTo
+            else:
+                self._tree[1:] = setTo
+                self._value = None
+                self.children = []
+                self._parseTree(self._tree)
+                children_updated = True
+        else:
+            if isinstance(setTo, bool):
                 if setTo:
                     if self._is_yesno_bool(self._value):
                         setTo = 'yes'
@@ -185,11 +196,6 @@ class ParsedValue(AccessesTree):
                     else:
                         setTo = 'false'
             self._value = sexpdata.Symbol(setTo)
-        else:
-            if isinstance(self._value, sexpdata.Symbol):
-                self._value = sexpdata.Symbol(setTo)
-            else:
-                self._value = setTo
             
         if self.sourceTree is not None and len(self.sourceTree) >= self._base_coords[0]:
             c = self.sourceTree
@@ -197,8 +203,10 @@ class ParsedValue(AccessesTree):
                 c = c[self._base_coords[i]]
                 
             if isinstance(c, list) and len(c) > 1:
-                if isinstance(self._value, list):
-                    c[1:] = self._value 
+                if children_updated:
+                    c[1:] = self._tree[1:]
+                elif isinstance(self._value, list):
+                    c[1:] = self._value
                     #print(f"Setting values as list on {c}")
                 else:
                     c[1] = self._value
